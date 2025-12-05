@@ -1,0 +1,34 @@
+{
+  "name": "ahk-for-gamers",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "console": "npx tsx src/console.ts",
+    "tray": "npx tsx src/tray.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "check:dev": "node scripts/check-native.js",
+    "check:build": "node scripts/check-native.js --target=18.5.0",
+    "build:process-watcher": "dotnet restore process_watcher/ProcessWatcher.csproj && dotnet build process_watcher/ProcessWatcher.csproj -c Release",
+    "build:bundle": "npx esbuild src/tray.ts --bundle --platform=node --outfile=dist/tray.js --external:better-sqlite3",
+    "build:pkg": "pkg dist/tray.js --targets node18-win-x64 --output build/ahk-for-gamers.exe",
+    "build:copy-assets": "powershell -Command \"New-Item -ItemType Directory -Force -Path build; Copy-Item -Recurse -Force assets build/; Copy-Item -Force config.json build/; Copy-Item -Force game_process_names.txt build/; Copy-Item -Recurse -Force process_watcher/bin/Release/net8.0-windows build/process_watcher/; Copy-Item -Recurse -Force node_modules/better-sqlite3 build/node_modules/better-sqlite3; Copy-Item -Recurse -Force node_modules/bindings build/node_modules/bindings; Copy-Item -Recurse -Force node_modules/file-uri-to-path build/node_modules/file-uri-to-path\"",
+    "build": "npm run build:process-watcher && npm run build:bundle && npm run check:build && npm run build:pkg && npm run build:copy-assets && npm run check:dev",
+    "clean": "powershell -Command \"Remove-Item -Recurse -Force -ErrorAction SilentlyContinue dist, build, process_watcher/bin, process_watcher/obj\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "better-sqlite3": "^12.5.0",
+    "systray2": "^2.1.4",
+    "winston": "^3.18.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.10.1",
+    "esbuild": "^0.27.1",
+    "pkg": "^5.8.1",
+    "tsx": "^4.21.0"
+  }
+}

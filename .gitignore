@@ -1,0 +1,7 @@
+node_modules/
+logs/
+process_watcher/bin/
+process_watcher/obj/
+.vscode/
+dist/
+build/

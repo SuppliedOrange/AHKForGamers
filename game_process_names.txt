@@ -1,0 +1,9 @@
+# Easy Anticheat spawns with a lot of EA games, lay low for the duration of it's runtime.
+EasyAntiCheat_EOS.exe
+
+# Arc Raiders
+PioneerGame.exe
+
+# Apex Legends
+r5apex_dx12.exe
+r5apex_dx11.exe

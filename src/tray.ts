@@ -1,6 +1,6 @@
 // f.y.i a lot of this file was ai generated
 
-import { exec } from "child_process";
+import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
 import systray2 from "systray2";
@@ -21,7 +21,7 @@ import {
 } from "./handlers/dbHandler";
 
 import logger from "./logger/logger";
-import { getConfigPath, getGameListPath, getAssetsDir } from "./utils/paths";
+import { getConfigPath, getGameListPath, getAssetsDir, getAppRoot } from "./utils/paths";
 
 // ==================== Systray Setup ====================
 
@@ -55,6 +55,7 @@ interface SystrayConfig {
 let isWatcherRunning = false;
 let isSystrayReady = false;
 let systray: any = null;
+let lockFileHandle: number | null = null;
 
 // Paths for config and game list (uses path utilities for pkg compatibility)
 const configPath = getConfigPath();
@@ -108,15 +109,23 @@ function loadIcons(): void {
  */
 function openInEditor(filePath: string): void {
 
-    // Use notepad on Windows, or fall back to the system default
+    // Use spawn with shell:true and windowsHide:true to run notepad without showing cmd
 
-    exec(`notepad "${filePath}"`, (err) => {
+    const child = spawn(`notepad.exe "${filePath}"`, [], {
 
-        if (err) {
-            logger.error(`Failed to open ${filePath}: ${err}`);
-        }
+        shell: true,
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true
 
     });
+
+    child.on("error", (err) => {
+        logger.error(`Failed to open ${filePath}: ${err}`);
+    });
+
+    // Unref so the parent process can exit independently
+    child.unref();
 
 }
 
@@ -284,6 +293,9 @@ function quitApp(): void {
     // Close database
     closeDatabase();
 
+    // Release singleton lock
+    releaseLock();
+
     // Kill systray
     if (systray) {
         systray.kill(false);
@@ -396,6 +408,108 @@ function handleMenuClick(seq_id: number): void {
     }
 }
 
+// ==================== Singleton Lock ====================
+
+/**
+ * Lock file path for singleton instance check.
+ */
+function getLockFilePath(): string {
+    return path.join(getAppRoot(), ".afg.lock");
+}
+
+/**
+ * Attempts to acquire a singleton lock.
+ * Returns true if lock acquired, false if another instance is running.
+ */
+function acquireLock(): boolean {
+
+    const lockPath = getLockFilePath();
+    
+    try {
+
+        // Try to open the lock file with exclusive write access
+        // This will fail if another instance has it open
+
+        lockFileHandle = fs.openSync(lockPath, 'wx');
+        
+        // Write our PID to the lock file
+
+        fs.writeSync(lockFileHandle, process.pid.toString());
+        
+        return true;
+
+    } catch (err: any) {
+
+        if (err.code === 'EEXIST') {
+
+            // Lock file exists, check if the process is still running
+
+            try {
+
+                const pid = parseInt(fs.readFileSync(lockPath, 'utf8').trim(), 10);
+                
+                // Try to check if process exists (this throws if not)
+                process.kill(pid, 0);
+                
+                // Process exists, another instance is running
+                return false;
+
+            } 
+            
+            catch {
+
+                // Process doesn't exist or can't read file, remove stale lock
+
+                try {
+
+                    fs.unlinkSync(lockPath);
+
+                    // Try again
+
+                    lockFileHandle = fs.openSync(lockPath, 'wx');
+                    fs.writeSync(lockFileHandle, process.pid.toString());
+                    
+                    return true;
+
+                } catch {
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+}
+
+/**
+ * Releases the singleton lock.
+ */
+function releaseLock(): void {
+
+    const lockPath = getLockFilePath();
+    
+    if (lockFileHandle !== null) {
+
+        try {
+
+            fs.closeSync(lockFileHandle);
+        } 
+        
+        catch { /* ignore */ }
+
+        lockFileHandle = null;
+
+    }
+    
+    try {
+
+        fs.unlinkSync(lockPath);
+
+    } 
+    
+    catch { /* ignore */ }
+    
+}
+
 // ==================== Main Entry Point ====================
 
 async function main(): Promise<void> {
@@ -403,6 +517,12 @@ async function main(): Promise<void> {
     try {
 
         logger.info("Starting AFG tray application...");
+
+        // Check for singleton instance
+        if (!acquireLock()) {
+            logger.warn("Another instance is already running. Exiting.");
+            process.exit(0);
+        }
 
         // Load icons from files
         loadIcons();

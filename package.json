@@ -11,8 +11,9 @@
     "build:process-watcher": "dotnet restore process_watcher/ProcessWatcher.csproj && dotnet build process_watcher/ProcessWatcher.csproj -c Release",
     "build:bundle": "npx esbuild src/tray.ts --bundle --platform=node --outfile=dist/tray.js --external:better-sqlite3",
     "build:pkg": "pkg dist/tray.js --targets node18-win-x64 --output build/ahk-for-gamers.exe",
+    "build:hide-console": "node scripts/hide-console.js",
     "build:copy-assets": "powershell -Command \"New-Item -ItemType Directory -Force -Path build; Copy-Item -Recurse -Force assets build/; Copy-Item -Force config.json build/; Copy-Item -Force game_process_names.txt build/; Copy-Item -Recurse -Force process_watcher/bin/Release/net8.0-windows build/process_watcher/; Copy-Item -Recurse -Force node_modules/better-sqlite3 build/node_modules/better-sqlite3; Copy-Item -Recurse -Force node_modules/bindings build/node_modules/bindings; Copy-Item -Recurse -Force node_modules/file-uri-to-path build/node_modules/file-uri-to-path\"",
-    "build": "npm run build:process-watcher && npm run build:bundle && npm run check:build && npm run build:pkg && npm run build:copy-assets && npm run check:dev",
+    "build": "npm run build:process-watcher && npm run build:bundle && npm run check:build && npm run build:pkg && npm run build:hide-console && npm run build:copy-assets && npm run check:dev",
     "clean": "powershell -Command \"Remove-Item -Recurse -Force -ErrorAction SilentlyContinue dist, build, process_watcher/bin, process_watcher/obj\""
   },
   "keywords": [],

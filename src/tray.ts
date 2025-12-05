@@ -109,11 +109,11 @@ function loadIcons(): void {
  */
 function openInEditor(filePath: string): void {
 
-    // Use spawn with shell:true and windowsHide:true to run notepad without showing cmd
+    // Use spawn without shell to prevent command injection.
+    // Pass the file path as a separate argument array element.
 
-    const child = spawn(`notepad.exe "${filePath}"`, [], {
+    const child = spawn("notepad.exe", [filePath], {
 
-        shell: true,
         detached: true,
         stdio: "ignore",
         windowsHide: true

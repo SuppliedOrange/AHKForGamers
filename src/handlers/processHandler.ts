@@ -1,5 +1,7 @@
 import { execFile, spawn } from 'child_process';
 import { Buffer } from 'buffer';
+import fs from 'fs';
+import path from 'path';
 import { PowershellCommandFailureError, PowershellNotFoundError, PowershellOutputParseError } from '../errors/errors';
 import getGameProcessNames from './gameProcessNamesParser';
 import type { WatcherEvent } from '../watchers/processWatcherService';
@@ -286,6 +288,30 @@ export function bufferAndKillAhkProcesses(): void {
 }
 
 /**
+ * Validates that an executable path is a valid AutoHotkey executable.
+ * This is a security measure to prevent arbitrary code execution.
+ * 
+ * @param exePath - The path to validate
+ * @returns true if the path is a valid AutoHotkey executable, false otherwise
+ */
+function isValidAhkExecutable(exePath: string): boolean {
+
+    // Check if the file exists
+    if (!fs.existsSync(exePath)) {
+        return false;
+    }
+
+    // Validate that the executable name starts with "AutoHotkey" (case-insensitive)
+    const fileName = path.basename(exePath).toLowerCase();
+    if (!fileName.startsWith('autohotkey') || !fileName.endsWith('.exe')) {
+        return false;
+    }
+
+    return true;
+
+}
+
+/**
  * Restarts all buffered AHK processes as detached processes.
  * Called when all incompatible processes have stopped.
  */
@@ -305,6 +331,20 @@ export function restoreBufferedAhkProcesses(): void {
             // Spawn the AHK process detached using the original exe and script path
             // The script path is the argument to the AutoHotkey executable
             if (proc.scriptPath && proc.exe) {
+
+                // Validate the executable is a legitimate AutoHotkey executable
+                // to prevent arbitrary code execution
+                if (!isValidAhkExecutable(proc.exe)) {
+                    logger.warn(`Skipping process restoration - invalid or non-existent AHK executable: ${proc.exe}`);
+                    continue;
+                }
+
+                // Validate the script file exists
+                if (!fs.existsSync(proc.scriptPath)) {
+                    logger.warn(`Skipping process restoration - script file not found: ${proc.scriptPath}`);
+                    continue;
+                }
+
                 const child = spawn(proc.exe, [proc.scriptPath], {
                     detached: true,
                     stdio: "ignore",

@@ -291,6 +291,22 @@ export function bufferAndKillAhkProcesses(): void {
  * Validates that an executable path is a valid AutoHotkey executable.
  * This is a security measure to prevent arbitrary code execution.
  * 
+ * Valid AutoHotkey executable names include:
+ * - AutoHotkey.exe (v1 default)
+ * - AutoHotkey32.exe (v1/v2 32-bit)
+ * - AutoHotkey64.exe (v1/v2 64-bit)
+ * - AutoHotkeyU32.exe (v1 Unicode 32-bit)
+ * - AutoHotkeyU64.exe (v1 Unicode 64-bit)
+ * - AutoHotkeyA32.exe (v1 ANSI 32-bit)
+ * 
+ * The function validates:
+ * 1. The file exists on disk
+ * 2. The filename matches the exact pattern of official AutoHotkey executables
+ * 
+ * Note: This validation is one layer of defense. The executable path is sourced from
+ * WMI process events (which already ran on the system), providing inherent trust.
+ * However, this validation prevents restoration of incorrectly tracked processes.
+ * 
  * @param exePath - The path to validate
  * @returns true if the path is a valid AutoHotkey executable, false otherwise
  */
@@ -301,9 +317,21 @@ function isValidAhkExecutable(exePath: string): boolean {
         return false;
     }
 
-    // Validate that the executable name starts with "AutoHotkey" (case-insensitive)
+    // List of known valid AutoHotkey executable names (case-insensitive)
+    // This uses exact matching to prevent bypass via similar names like "autohotkey-malware.exe"
+    const validAhkNames = [
+        'autohotkey.exe',      // v1/v2 default
+        'autohotkey32.exe',    // v1/v2 32-bit
+        'autohotkey64.exe',    // v1/v2 64-bit
+        'autohotkeyu32.exe',   // v1 Unicode 32-bit
+        'autohotkeyu64.exe',   // v1 Unicode 64-bit
+        'autohotkeya32.exe',   // v1 ANSI 32-bit
+    ];
+
     const fileName = path.basename(exePath).toLowerCase();
-    if (!fileName.startsWith('autohotkey') || !fileName.endsWith('.exe')) {
+
+    // Validate against exact known AutoHotkey executable names
+    if (!validAhkNames.includes(fileName)) {
         return false;
     }
 

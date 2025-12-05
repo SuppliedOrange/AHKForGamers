@@ -17,8 +17,9 @@ For most folks, install a pre-build here:
 [![Button Icon]][Link]
 
 Once you install the folder, all you need to do is run the executable. However, if your system has a weak CPU or
-your CPU is often used by other software, you will want to change the `process_query_poll_wait_seconds` value to
-something a bit higher (like 0.3 or 0.4).
+your CPU is often used by other software, you will want to change the `process_query_poll_wait_seconds` value through
+the config option of the system tray icon to something a bit higher (like 0.3 or 0.4). Then restart to see if your
+system has better CPU performance with this app while also being able to react faster than the game's anticheat.
 
 It's an integral part of this app because the lower the number = the faster the game detection = lower the risk of
 the game picking it up before you.
